@@ -50,10 +50,10 @@ def interpolate_df(df,interpolation):
            
     return df_int  
 
-def make_spectrum(frame,interp):
+def make_spectrum(frame):
     spectrum=fft_frame(frame)
     #spectrum=spectrum.T
-    x=interp*np.arange(0,2*15797.76,(2*15797.76/(spectrum.shape[0]))).astype(int)
+    x=np.arange(0,2*15797.76,(2*15797.76/(spectrum.shape[0]))).astype(int)
     y=np.arange(0,(25/1000)*spectrum.shape[1],(25/1000))
     x=np.around(x,decimals=2)
     y=np.around(y,decimals=2)
@@ -69,16 +69,14 @@ def func(x,x0,A,tau):
     return A*np.exp(-(x-x0)/tau)
 
 path =r'C:\Users\Administrator\Desktop\Kacper\2019\11\5'
-filename='HgCdTe_40K'
+filename='HgCdTe_60K'
 frame=read_files(path,filename)
 frame=frame.groupby(0, as_index=False).mean()
-frame=frame.iloc[1:,1:]
-interp=1
 frame_int=interp(frame,1/interp)
 sns.heatmap(frame.iloc[:,100:500],cmap='hsv') 
 
 
-spectrum,x,y=make_spectrum(frame,interp)
+spectrum,x,y=make_spectrum(frame)
 plt.plot(np.log(spectrum.loc[:,2186]))
 
 x_plot=y[1000:4000]
