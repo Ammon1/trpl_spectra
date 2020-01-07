@@ -69,7 +69,7 @@ def func(x,x0,A,tau):
     return A*np.exp(-(x-x0)/tau)
 
 path =r'C:\Users\Administrator\Desktop\Kacper\2019\11\5'
-filename='HgCdTe_60K'
+filename='HgCdTe_70K'
 frame=read_files(path,filename)
 frame=frame.groupby(0, as_index=False).mean()
 frame_int=interp(frame,1/interp)
@@ -82,7 +82,9 @@ plt.plot(np.log(spectrum.loc[:,2186]))
 x_plot=y[1000:4000]
 y_plot= spectrum.loc[25:99.98,2186].values
 
-popt,pcov=curve_fit(func, x_plot, y_plot,p0=[0,40000,20])
-
+popt,pcov=curve_fit(func, x_plot, y_plot,p0=[0,40000,20]
+                    ,bounds=([0,0,0],[25,1e6,200]))
+plt.plot(x_plot,y_plot)
+plt.plot(x_plot,func(x_plot,*popt))
 
 
