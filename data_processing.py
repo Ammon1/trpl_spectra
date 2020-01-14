@@ -12,10 +12,21 @@ from scipy import interpolate
 from scipy.fftpack import fft
 from scipy.signal import blackman
 
-def ica_plot(X,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9):
-        y=X[:,0]*a0+X[:,1]*a1+X[:,2]*a2+X[:,3]*a3+X[:,4]*a4+X[:,5]*a5
-        y+=X[:,6]*a6+X[:,7]*a7+X[:,8]*a8+X[:,9]*a9
+def ica_plot(X,a0,a1,a2,a3,a4,a5,a6):
+        y=X[:,0]*a0+X[:,1]*a1+X[:,2]*a2+X[:,3]*a3+X[:,4]*a4+X[:,5]*a5+X[:,6]*a6
         return y
+
+def fit_noise(y,X_transformed):
+    popt, pcov = curve_fit(ica_plot, X_transformed,y)
+    return ica_plot(X_transformed, *popt)
+
+def noise_remover(frame):
+        intensities=frame.iloc[:,:].values
+        transformer = FastICA(n_components=7,random_state=0)
+        X_transformed = transformer.fit_transform(intensities)            
+        #intensities_cleaned=np.zeros(intensities.shape)            
+        frame_ica=frame.apply(lambda y: fit_noise(y,X_transformed))
+        return frame_ica,X_transformed
     
 def fft_frame(df):
     x=df.iloc[:,1].values
@@ -69,42 +80,67 @@ def make_spectrum(frame):
     return spectrum,x,y
 
 from scipy.signal import savgol_filter   
-def func(x,x0,x1,A0,A1,tau0,tau1):
+def time_constant2(x,x0,x1,A0,A1,tau0,tau1):
     return A0*np.exp(-(x-x0)/tau0)+A1*np.exp(-(x-x1)/tau1)
 
+def time_constant1(x,x0,A0,tau0):
+    return A0*np.exp(-(x-x0)/tau0)
 
-path =r'C:\Users\Administrator\Desktop\Kacper\2020\1\13'
-filename='HgCdTe_4734_115K_mala_moc'
+
+path =r'C:\Users\Administrator\Desktop\Kacper\2020\1\14'
+filename='HgCdTe_4734_120K_3filtry'
 frame=read_files(path,filename)
 frame=frame.groupby(0, as_index=False).mean()
+plt.plot(frame.iloc[100,40:])
+
+frame_ica,X_transformed=noise_remover(frame.iloc[:,40:])
+plt.plot(frame_ica.iloc[100,:])
+plt.plot(X_transformed[:,6])
+plt.plot(np.abs(fft(X_transformed[:,2])))
+length=fft(X_transformed[:,5]).shape[0]
+w = blackman(length)
+plt.plot(np.abs(fft(w*X_transformed[:,0])))
+plt.xlim(0,1000)
+
+spectrum_ica,x,y=make_spectrum(frame_ica)
 spectrum,x,y=make_spectrum(frame)
 
-sns.heatmap(np.log(spectrum.iloc[:,180:200]),cmap='hsv')
-sns.heatmap(np.log(spectrum_int.iloc[:,160:200]),cmap='hsv')
+sns.heatmap(spectrum.iloc[10:,140:220],cmap='hsv')
+sns.heatmap(spectrum_ica.iloc[:,140:220],cmap='hsv')
 
+spectrum_ica_win=spectrum_ica.rolling(100).mean()
+spectrum_win=spectrum.rolling(100).mean()
+sns.heatmap(np.log(spectrum_ica_win.iloc[:,150:250]),cmap='hsv')
+sns.heatmap(np.log(spectrum_win.iloc[110:,150:250]),cmap='hsv')
 
-spectrum_win=spectrum.rolling(50).mean()
-sns.heatmap(np.log(spectrum_win.iloc[:,100:300]),cmap='hsv')
-sns.heatmap(np.log(spectrum_win.iloc[:,170:200]),cmap='hsv')
-plt.plot(np.log(spectrum.loc[:,2312]))
-plt.plot(np.log(spectrum.loc[:,2299]))
+plt.plot(np.log(spectrum.loc[40:,2285]))
+plt.plot(np.log(spectrum_ica.loc[:,2285]))
 
-plt.plot(np.log(spectrum.loc[:,629]+spectrum.loc[:,2719]+spectrum.loc[:,2732]+spectrum.loc[:,2630]))
-plt.plot(np.log(spectrum_win.iloc[:,190]))
-plt.plot(np.log(spectrum_win.iloc[:,191]))
-plt.plot(np.log(spectrum_win.iloc[:,192]))
-plt.plot(np.log(spectrum_win.iloc[:,193]))
-plt.xlim(100,500)
-plt.ylim(-4,0)
+def fit_time(y_plot):
+    y_plot= (y_plot.values)[:]
+    x_plot=np.arange(0,2000,2000/y_plot.shape[0])
+    #plt.plot(x_plot,y_plot)
+    popt2=[0,0,0,0,0,0]
+# =============================================================================
+#     try:
+#         popt1,pcov1=curve_fit(time_constant1, x_plot1, y_plot1,p0=[0,4,2000]
+#                     ,bounds=([0,0,0],[25,200,100000]))
+#     except:
+#         popt1[0,2]=[0,0]
+#     #plt.plot(x_plot1,y_plot1)
+#     plt.plot(x_plot1,time_constant1(x_plot1,*popt1))
+# =============================================================================
 
-y_plot=spectrum_win.loc[:,2288]
-x_plot=y[50:-300]
-y_plot= (y_plot.values)[50:-300]
-x_plot=np.flip(x_plot)
+    try:
+        popt2,pcov2=curve_fit(time_constant2, x_plot, y_plot,p0=[0,0,4,4,10,2000]
+                    ,bounds=([0,0,0,0,0,0],[25,25,200,200,200,4000]))
+    except:
+        print('error')
+    #plt.plot(x_plot1,y_plot1)
+    #plt.plot(x_plot1,time_constant2(x_plot1,*popt2))
+    data=[popt2[0],popt2[1],int(popt2[4]),int(popt2[5])]
+    return np.array(data)
 
-popt,pcov=curve_fit(func, x_plot, y_plot,p0=[0,0,4,4,20,20]
-                    ,bounds=([0,0,0,0,0,0],[25,25,200,200,800,800]))
-plt.plot(x_plot,y_plot)
-plt.plot(x_plot,func(x_plot,*popt))
-
-
+spectrum_to_fit=spectrum_ica.iloc[:,100:300]
+data=spectrum_to_fit.apply(lambda y: fit_time(y))
+plt.plot(data.iloc[3,:])
