@@ -88,30 +88,23 @@ def time_constant1(x,x0,A0,tau0):
 
 
 path =r'C:\Users\Administrator\Desktop\Kacper\2020\1\14'
-filename='HgCdTe_4734_120K_3filtry'
+filename='HgCdTe_4734_190K_3filtry'
 frame=read_files(path,filename)
 frame=frame.groupby(0, as_index=False).mean()
 plt.plot(frame.iloc[100,40:])
 
 frame_ica,X_transformed=noise_remover(frame.iloc[:,40:])
-plt.plot(frame_ica.iloc[100,:])
-plt.plot(X_transformed[:,6])
-plt.plot(np.abs(fft(X_transformed[:,2])))
-length=fft(X_transformed[:,5]).shape[0]
-w = blackman(length)
-plt.plot(np.abs(fft(w*X_transformed[:,0])))
-plt.xlim(0,1000)
 
 spectrum_ica,x,y=make_spectrum(frame_ica)
 spectrum,x,y=make_spectrum(frame)
 
-sns.heatmap(spectrum.iloc[10:,140:220],cmap='hsv')
-sns.heatmap(spectrum_ica.iloc[:,140:220],cmap='hsv')
+sns.heatmap(spectrum.iloc[10:,150:250],cmap='hsv')
+sns.heatmap(spectrum_ica.iloc[:,150:250],cmap='hsv')
 
 spectrum_ica_win=spectrum_ica.rolling(100).mean()
 spectrum_win=spectrum.rolling(100).mean()
-sns.heatmap(np.log(spectrum_ica_win.iloc[:,150:250]),cmap='hsv')
-sns.heatmap(np.log(spectrum_win.iloc[110:,150:250]),cmap='hsv')
+sns.heatmap(np.log(spectrum_ica_win.iloc[:,200:250]),cmap='hsv')
+sns.heatmap(np.log(spectrum_win.iloc[110:,200:250]),cmap='hsv')
 
 plt.plot(np.log(spectrum.loc[40:,2285]))
 plt.plot(np.log(spectrum_ica.loc[:,2285]))
@@ -141,6 +134,9 @@ def fit_time(y_plot):
     data=[popt2[0],popt2[1],int(popt2[4]),int(popt2[5])]
     return np.array(data)
 
-spectrum_to_fit=spectrum_ica.iloc[:,100:300]
+spectrum_to_fit=spectrum_ica.iloc[40:,150:250]
 data=spectrum_to_fit.apply(lambda y: fit_time(y))
 plt.plot(data.iloc[3,:])
+plt.xlim(2000,3000)
+plt.ylim(1000,3000)
+time_170=1750
