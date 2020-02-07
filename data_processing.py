@@ -10,23 +10,67 @@ from scipy import fftpack
 from scipy import signal
 from scipy import interpolate
 from scipy.fftpack import fft
+from scipy.fftpack import rfft
 from scipy.signal import blackman
+from sklearn.svm import SVR
 
-def ica_plot(X,a0,a1,a2,a3,a4,a5,a6):
-        y=X[:,0]*a0+X[:,1]*a1+X[:,2]*a2+X[:,3]*a3+X[:,4]*a4+X[:,5]*a5+X[:,6]*a6
+
+def ica_plot6(X,a0,a1,a2,a3,a4,a5):#,a5,a6):
+        y=X[:,0]*a0+X[:,1]*a1+X[:,2]*a2+X[:,3]*a3+X[:,4]*a4+X[:,5]*a5
+        return y
+
+def ica_plot5(X,a0,a1,a2,a3,a4):#,a4,a5,a6):
+        y=X[:,0]*a0+X[:,1]*a1+X[:,2]*a2+X[:,3]*a3+X[:,4]*a4
+        return y
+    
+def ica_plot4(X,a0,a1,a2,a3):#,a4,a5,a6):
+        y=X[:,0]*a0+X[:,1]*a1+X[:,2]*a2+X[:,3]*a3
+        return y
+    
+def ica_plot3(X,a0,a1,a2):#,a4,a5,a6):
+        y=X[:,0]*a0+X[:,1]*a1+X[:,2]*a2
         return y
 
 def fit_noise(y,X_transformed):
+    bg=y[0]
+    y=y-bg
     popt, pcov = curve_fit(ica_plot, X_transformed,y)
-    return ica_plot(X_transformed, *popt)
+    y=ica_plot(X_transformed, *popt)+bg
+    return np.append(y,popt)
+
+def transform(X_transformed):
+    X_transformed_copy=np.zeros(X_transformed.shape[0])
+    i=0
+    for y in np.transpose(X_transformed):
+            rms = np.sqrt(np.mean(y**2)) 
+            if np.any(y[y>7*rms]):
+                #plt.plot(y)
+                #print('ok',i)
+                X_transformed_copy=np.vstack((X_transformed_copy,y))
+            else:
+                pass
+                #print('not ok',i)
+            i=i+1
+    return np.transpose(X_transformed_copy)
+
+df=np.delete(transform(X_transformed),0,1)
+
 
 def noise_remover(frame):
         intensities=frame.iloc[:,:].values
-        transformer = FastICA(n_components=7,random_state=0)
-        X_transformed = transformer.fit_transform(intensities)            
-        #intensities_cleaned=np.zeros(intensities.shape)            
-        frame_ica=frame.apply(lambda y: fit_noise(y,X_transformed))
-        return frame_ica,X_transformed
+        transformer = FastICA(n_components=20,max_iter=2000,tol=0.00001,
+                              fun='cube',
+                              random_state=0)
+        X_transformed = transformer.fit_transform(intensities)  
+        X_transformed=np.delete(transform(X_transformed),0,1)
+        print(X_transformed.shape)
+        if X_transformed.shape[1]==3:
+            data_ica=frame.apply(lambda y: fit_noise3(y,X_transformed))
+            
+        elif X_transformed.shape[1]==4:
+            data_ica=frame.apply(lambda y: fit_noise4(y,X_transformed))
+            
+        return data_ica,X_transformed
     
 def fft_frame(df):
     x=df.iloc[:,1].values
@@ -40,8 +84,6 @@ def fft_frame(df):
 def read_files(path,filename):
     
     frame=pd.read_csv(path+'\\'+filename,index_col=False,sep=' ')
-    cols=np.arange(0,frame.shape[1])
-    frame=pd.read_csv(path+'\\'+filename,index_col=False,sep=' ',names=cols)
     return frame
 
 def model(x,x_interp,y,interpolate):
@@ -54,25 +96,15 @@ def interp(df,interpolation):
     df_interp=df.apply(lambda y: model(x,x_interp,y,interpolate))
     return df_interp
     
-def interpolate_df(df,interpolation):
-    x=np.arange(0,df.shape[0])
-    x_interp=np.arange(0,x[-1],interpolation)
-    df_int=pd.DataFrame(np.zeros((x_interp.shape[0],df.shape[1])))
-    for col in df.columns:
-            y=df.loc[:,col].values
-            model=interpolate.interp1d(x, y,kind='cubic')
-            df_int.loc[:,col]=model(x_interp)
-           
-    return df_int  
 
 def make_spectrum(frame):
     spectrum=fft_frame(frame)
     #spectrum=spectrum.T
     x=np.arange(0,2*15797.76,(2*15797.76/(spectrum.shape[0]))).astype(int)
-    y=np.arange(0,(25/1000)*spectrum.shape[1],(25/1000))
+    y=np.arange(0,spectrum.shape[1])
     x=np.around(x,decimals=2)
     y=np.around(y,decimals=2)
-    #spectrum.columns=y
+    spectrum.columns=y
     spectrum=spectrum.set_index(x)
     spectrum=spectrum.T
     #fig = plt.figure(figsize=(6,6), dpi=200)
@@ -87,27 +119,86 @@ def time_constant1(x,x0,A0,tau0):
     return A0*np.exp(-(x-x0)/tau0)
 
 
-path =r'C:\Users\Administrator\Desktop\Kacper\2020\1\14'
-filename='HgCdTe_4734_190K_3filtry'
+path =r'C:\Users\Administrator\Desktop\Kacper\2020\1\8'
+filename='HgCdTe_110K_1'
 frame=read_files(path,filename)
-frame=frame.groupby(0, as_index=False).mean()
-plt.plot(frame.iloc[100,40:])
+frame=frame.groupby('2.000', as_index=False).mean()
+frame_int=interp(frame,0.1)
+plt.plot(frame.iloc[:,200].values)
+plt.plot(frame_ica.iloc[:,200].values)
+data_ica,X_transformed=noise_remover(frame.iloc[:,:])
+frame_ica=data_ica.iloc[:2487,:]
+data=data_ica.iloc[2487:,:]
+plt.plot(X_transformed[:,1])
 
-frame_ica,X_transformed=noise_remover(frame.iloc[:,40:])
+x=X_transformed[:,1]
+y=np.abs(fft(x))
+length=y.shape[0]
+w = blackman(length)
+spectra=np.abs(rfft(w*x))
+plt.plot(spectra,color='blue')
+
+x=X_transformed[:,0]
+y=np.abs(fft(x))
+length=y.shape[0]
+w = blackman(length)
+spectra=np.abs(rfft(w*x))
+plt.plot(spectra,color='red')
+plt.xlim(300,500)
+
+
+x=X_transformed[:,3]
+y=np.abs(fft(x))
+length=y.shape[0]
+w = blackman(length)
+spectra=np.abs(rfft(w*x))
+plt.plot(spectra,color='green')
+plt.xlim(300,500)
+
+plt.plot(data.iloc[0,1:].values,color='red')
+plt.plot(data.iloc[1,1:].values,color='blue')
+plt.yscale('log')
+plt.xlim(300,8000)
+plt.ylim(1e-3,1)
+
+for x in np.transpose(X_transformed):
+    y=np.abs(fft(x))
+    length=y.shape[0]
+    w = blackman(length)
+    spectra= np.abs(rfft(w*x))
+    x=np.arange(0,15797.76,(15797.76/(spectra.shape[0]))).astype(int)
+    plt.plot(x,spectra)
+    plt.xlim(1000,6000)
+
+
 
 spectrum_ica,x,y=make_spectrum(frame_ica)
 spectrum,x,y=make_spectrum(frame)
+spectrum_int,x,y=make_spectrum(frame_int)
 
-sns.heatmap(spectrum.iloc[10:,150:250],cmap='hsv')
-sns.heatmap(spectrum_ica.iloc[:,150:250],cmap='hsv')
+spectrum_win=spectrum_ica.rolling(10).mean()
 
-spectrum_ica_win=spectrum_ica.rolling(100).mean()
-spectrum_win=spectrum.rolling(100).mean()
-sns.heatmap(np.log(spectrum_ica_win.iloc[:,200:250]),cmap='hsv')
-sns.heatmap(np.log(spectrum_win.iloc[110:,200:250]),cmap='hsv')
+sns.heatmap(np.log(spectrum.iloc[100:3000,150:220]),cmap='hsv')
+sns.heatmap(np.log(spectrum_int.iloc[100:3000,150:220]),cmap='hsv')
+sns.heatmap(np.log(spectrum_win.iloc[10:100,170:230]),cmap='hsv')
 
-plt.plot(np.log(spectrum.loc[40:,2285]))
-plt.plot(np.log(spectrum_ica.loc[:,2285]))
+#spectrum_ica_win=spectrum_ica.rolling(100).mean()
+
+spectrum_win.iloc[:,100:300].to_csv(path+filename+'TRPL_map')
+#sns.heatmap(np.log(spectrum_ica_win.iloc[:,200:250]),cmap='hsv')
+sns.heatmap(np.log(spectrum_win.iloc[110:,150:220]),cmap='hsv')
+
+plt.plot(np.log(spectrum.iloc[100:3000,200]))
+plt.plot(np.log(spectrum_int.iloc[100:3000,200]))
+plt.plot(np.log(spectrum_win.loc[30:500,2702]))
+plt.plot(np.log(spectrum_win.loc[30:500,2716]))
+plt.plot(np.log(spectrum_win.loc[30:500,2729]))
+
+plt.plot(np.log(spectrum_win.loc[120:,1615]))
+plt.plot(np.log(spectrum_win.loc[120:,1628]))
+plt.plot(np.log(spectrum_win.loc[120:,1628]))
+
+
 
 def fit_time(y_plot):
     y_plot= (y_plot.values)[:]
