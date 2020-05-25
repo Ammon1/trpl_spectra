@@ -14,56 +14,6 @@ from scipy.fftpack import rfft
 from scipy.signal import blackman
 from sklearn.svm import SVR
 
-def ica_plot7(X,a0,a1,a2,a3,a4,a5,a6):#,a5,a6):
-        y=X[:,0]*a0+X[:,1]*a1+X[:,2]*a2+X[:,3]*a3+X[:,4]*a4+X[:,5]*a5+X[:,6]*a6
-        return y
-
-def ica_plot6(X,a0,a1,a2,a3,a4,a5):#,a5,a6):
-        y=X[:,0]*a0+X[:,1]*a1+X[:,2]*a2+X[:,3]*a3+X[:,4]*a4+X[:,5]*a5
-        return y
-
-def ica_plot5(X,a0,a1,a2,a3,a4):#,a4,a5,a6):
-        y=X[:,0]*a0+X[:,1]*a1+X[:,2]*a2+X[:,3]*a3+X[:,4]*a4
-        return y
-    
-def ica_plot4(X,a0,a1,a2,a3):#,a4,a5,a6):
-        y=X[:,0]*a0+X[:,1]*a1+X[:,2]*a2+X[:,3]*a3
-        return y
-    
-def ica_plot3(X,a0,a1,a2):#,a4,a5,a6):
-        y=X[:,0]*a0+X[:,1]*a1+X[:,2]*a2
-        return y
-
-def fit_noise(y,X_transformed):
-    bg=y[0]
-    y=y-bg
-    
-    if X_transformed.shape[1]==3:
-        popt3, pcov = curve_fit(ica_plot3, X_transformed,y)
-        y=ica_plot3(X_transformed, *popt3)+bg
-        return np.append(y,popt3)
-        
-    elif X_transformed.shape[1]==4:
-        popt4, pcov = curve_fit(ica_plot4, X_transformed,y)
-        y=ica_plot4(X_transformed, *popt4)+bg
-        return np.append(y,popt4)
-        
-    elif X_transformed.shape[1]==5:
-        popt5, pcov = curve_fit(ica_plot5, X_transformed,y)
-        y=ica_plot5(X_transformed, *popt5)+bg
-        return np.append(y,popt5)
-    
-    elif X_transformed.shape[1]==6:
-        popt6, pcov = curve_fit(ica_plot6, X_transformed,y)
-        y=ica_plot6(X_transformed, *popt6)+bg
-        return np.append(y,popt6)
-    
-    elif X_transformed.shape[1]==7:
-        popt7, pcov = curve_fit(ica_plot7, X_transformed,y)
-        y=ica_plot7(X_transformed, *popt7)+bg
-        return np.append(y,popt7)
-    
-    
 
 def transform(X_transformed):
     X_transformed_copy=np.zeros(X_transformed.shape[0])
@@ -82,20 +32,6 @@ def transform(X_transformed):
 
 #df=np.delete(transform(X_transformed),0,1)
 
-
-def noise_remover(frame):
-        intensities=frame.iloc[:,:].values
-        transformer = FastICA(n_components=7,max_iter=20000,
-                              fun='cube',
-                              random_state=0)
-        X_transformed = transformer.fit_transform(intensities)  
-        X_transformed=np.delete(transform(X_transformed),0,1)
-        print(X_transformed.shape)
-        data_ica=frame.apply(lambda y: fit_noise(y,X_transformed))
-
-            
-        return data_ica,X_transformed
-    
 def fft_frame(df):
     x=df.iloc[:,1].values
     y=np.abs(fft(x))
@@ -110,17 +46,6 @@ def read_files(path,filename):
     frame=pd.read_csv(path+'\\'+filename,index_col=False,sep=' ')
     return frame
 
-def model(x,x_interp,y,interpolate):
-    model=interpolate.interp1d(x, y,kind='cubic')
-    return model(x_interp)
-
-def interp(df,interpolation):
-    x=np.arange(0,df.shape[0])
-    x_interp=np.arange(0,x[-1],interpolation)
-    df_interp=df.apply(lambda y: model(x,x_interp,y,interpolate))
-    return df_interp
-    
-
 def make_spectrum(frame):
     spectrum=fft_frame(frame)
     x=np.arange(0,2*15797.76,(2*15797.76/(spectrum.shape[0]))).astype(int)
@@ -132,13 +57,6 @@ def make_spectrum(frame):
     spectrum=spectrum.T
     sns.heatmap(np.log(spectrum.iloc[:,100:300]),cmap='hsv')
     return spectrum,x,y
-
-from scipy.signal import savgol_filter   
-def time_constant2(x,x0,x1,A0,A1,tau0,tau1):
-    return A0*np.exp(-(x-x0)/tau0)+A1*np.exp(-(x-x1)/tau1)
-
-def time_constant1(x,x0,A0,tau0):
-    return A0*np.exp(-(x-x0)/tau0)
 
 
 path =r'C:\Users\Administrator\Desktop\Kacper\2020\3\6'
