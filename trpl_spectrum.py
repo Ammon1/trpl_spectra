@@ -33,11 +33,13 @@ def transform(X_transformed):
 #df=np.delete(transform(X_transformed),0,1)
 
 def fft_frame(df):
-    x=df.iloc[:,1].values
+    x=df.iloc[:,10].values
     y=np.abs(fft(x))
     length=y.shape[0]
     w = blackman(length)
-    spectra=df.apply(lambda x: np.abs(fft(w*x)))
+    print(x.shape,' ',y.shape,' ',w.shape)
+    plt.plot(fft(w*x))
+    spectra=df.apply(lambda x: np.abs(np.fft.fft(w*x)))
     return spectra
     
     
@@ -59,8 +61,8 @@ def make_spectrum(frame):
     return spectrum,x,y
 
 
-path =r'C:\Users\Administrator\Desktop\Kacper\2020\3\6'
-filename='10250'
+path =r'C:\Users\Administrator\Desktop\Kacper\2021\3\26'
+filename='HgCdTe_2piki_240K'
 frame=read_files(path,filename)
 
 frame=frame.groupby(frame.columns.values[0], as_index=False).mean()

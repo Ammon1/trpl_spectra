@@ -141,25 +141,25 @@ def time_constant1(x,x0,A0,tau0):
     return A0*np.exp(-(x-x0)/tau0)
 
 
-path =r'C:\Users\Administrator\Desktop\Kacper\2020\3\6'
-filename='10250'
+path =r'C:\Users\Administrator\Desktop\Kacper\2020\8\28'
+filename='\\InAs10076'
 frame=read_files(path,filename)
-
 frame=frame.groupby(frame.columns.values[0], as_index=False).mean()
 
 
+
+
 spectrum,x,y=make_spectrum(frame)
-spectrum_int,x,y=make_spectrum(frame_int)
+sns.heatmap(np.log(spectrum.iloc[:100,10:500]),cmap='hsv')
+plt.plot(np.log(spectrum.iloc[5,10:600]))
+plt.plot(np.log(spectrum.iloc[:,275]))
+plt.plot(np.log(spectrum.iloc[0,10:500]))
+plt.plot(np.log(spectrum.iloc[5,10:500]))
+plt.plot(np.log(spectrum.iloc[10,10:500]))
+for i in range(270,290):
+    plt.plot(spectrum.iloc[:,i])
 
-spectrum_win=spectrum_ica.rolling(10).mean()
-
-sns.heatmap(np.log(spectrum.iloc[:100,150:250]),cmap='hsv')
-plt.plot(np.log(spectrum.iloc[9,70:250]))
-plt.plot(np.log(spectrum.iloc[15:,190]))
-plt.plot(np.log(spectrum.iloc[15:,200]))
-plt.plot(np.log(spectrum.iloc[15:,210]))
-
-
+spectrum.to_csv('10406_180k.csv')
 #spectrum_ica_win=spectrum_ica.rolling(100).mean()
 
 spectrum_win.iloc[:,100:300].to_csv(path+filename+'TRPL_map')
