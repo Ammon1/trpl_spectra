@@ -135,7 +135,7 @@ def model1(frame):
 
 
 #######algorhitm
-path =r'C:\Users\Administrator\Desktop\Kacper\2020\9\8'
+path =r'C:\Users\Administrator\Desktop\Kacper\2021\4\20'
 filename='\\H67_30K-2.4_2'
 frame=read_files(path,filename)
 frame_g=frame.groupby(frame.columns.values[0], as_index=False).mean()

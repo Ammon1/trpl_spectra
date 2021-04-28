@@ -61,24 +61,34 @@ def make_spectrum(frame):
     return spectrum,x,y
 
 
-path =r'C:\Users\Administrator\Desktop\Kacper\2021\3\26'
-filename='HgCdTe_2piki_240K'
+path =r'C:\Users\Administrator\Desktop\Kacper\2021\4\28'
+filename='\\inas_test10_39.999K_0'#0.145
 frame=read_files(path,filename)
 
-frame=frame.groupby(frame.columns.values[0], as_index=False).mean()
+#frame=frame.groupby(frame.columns.values[0], as_index=False).mean()
 
 
 spectrum,x,y=make_spectrum(frame)
-spectrum_int,x,y=make_spectrum(frame_int)
 
-spectrum_win=spectrum_ica.rolling(10).mean()
+sns.heatmap(np.log(spectrum.iloc[:250,100:200]),cmap='hsv')
+plt.plot(spectrum.iloc[0,100:200].values)
+plt.plot(spectrum.iloc[5,100:200].values)
+plt.plot(spectrum.iloc[10,100:200].values)
+plt.plot(spectrum.iloc[30,100:200].values)
+plt.plot(spectrum.iloc[:,130].values)
+plt.plot(spectrum.iloc[:,120].values)
 
-sns.heatmap(np.log(spectrum.iloc[:100,150:250]),cmap='hsv')
-plt.plot(np.log(spectrum.iloc[9,70:250]))
-plt.plot(np.log(spectrum.iloc[15:,190]))
-plt.plot(np.log(spectrum.iloc[15:,200]))
-plt.plot(np.log(spectrum.iloc[15:,210]))
+spectrum_win=spectrum.rolling(5).mean()
 
+sns.heatmap(np.log(spectrum_win.iloc[5:50,500:600]),cmap='hsv')
+
+plt.plot(spectrum.iloc[10,120:160].values)
+plt.plot(spectrum.iloc[15,120:160].values)
+plt.plot(spectrum.iloc[20,120:160].values)
+plt.plot(spectrum.iloc[30,120:160].values)
+plt.plot(np.log(spectrum.iloc[5:,132].values))
+
+sns.heatmap(np.log(spectrum_win.iloc[5:50,100:200]),cmap='hsv')
 
 #spectrum_ica_win=spectrum_ica.rolling(100).mean()
 
